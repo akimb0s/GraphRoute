@@ -21,7 +21,7 @@ russia3270 = {
     "Пермь": [("Екатеринбург", 350), ("Казань", 650)]
 }
 
-# Эвристика для A* и AO*: все нули → алгоритмы работают корректно как UCS
+# Эвристика для A*: все нули → алгоритмы работают корректно
 heuristic = {
     "Москва": 0,
     "Санкт-Петербург": 0,
@@ -82,52 +82,6 @@ def dfs(start, goal, visited=None, path=None, cost=0):
 
     return None, float('inf')
 
-# ---------------- UCS ----------------
-def ucs(start, goal):
-    visited = set()
-    queue = [(0, [start])]
-
-    while queue:
-        cost, path = heapq.heappop(queue)
-        city = path[-1]
-
-        if city == goal:
-            return path, cost
-
-        if city not in visited:
-            visited.add(city)
-            for neighbor, step_cost in russia3270.get(city, []):
-                heapq.heappush(queue, (cost + step_cost, path + [neighbor]))
-
-    return None, float('inf')
-
-# ---------------- Depth Limited Search (DLS) ----------------
-def dls(start, goal, limit, path=None, cost=0):
-    if path is None:
-        path = [(start, 0)]
-
-    if start == goal:
-        return path, cost
-
-    if limit <= 0:
-        return None, float('inf')
-
-    for neighbor, step_cost in russia3270.get(start, []):
-        if neighbor not in [city for city, _ in path]:
-            new_path, new_cost = dls(neighbor, goal, limit - 1, path + [(neighbor, step_cost)], cost + step_cost)
-            if new_path:
-                return new_path, new_cost
-
-    return None, float('inf')
-
-# ---------------- Iterative Deepening Search (IDS) ----------------
-def ids(start, goal, max_depth=50):
-    for depth in range(max_depth):
-        result, cost = dls(start, goal, depth)
-        if result:
-            return result, cost
-    return None, float('inf')
-
 # ---------------- A* Search ----------------
 def astar(start, goal):
     visited = set()
@@ -148,81 +102,3 @@ def astar(start, goal):
                 heapq.heappush(queue, (estimated, new_cost, path + [neighbor]))
 
     return None, float('inf')
-
-# ---------------- AO* Search (Simplified version) ----------------
-def ao_star(start, goal):
-    visited = set()
-    queue = [(heuristic[start], 0, [start])]
-
-    while queue:
-        estimated_total, cost_so_far, path = heapq.heappop(queue)
-        city = path[-1]
-
-        if city == goal:
-            return path, cost_so_far
-
-        if city not in visited:
-            visited.add(city)
-            children = russia3270.get(city, [])
-            for neighbor, step_cost in children:
-                if neighbor not in visited:
-                    new_cost = cost_so_far + step_cost
-                    estimated = new_cost + heuristic.get(neighbor, float('inf'))
-                    heapq.heappush(queue, (estimated, new_cost, path + [neighbor]))
-
-    return None, float('inf')
-
-# ---------------- Genetic Algorithm (Simplified for pathfinding) ----------------
-def genetic_algorithm(start, goal, population_size=50, generations=100, mutation_rate=0.1):
-    def create_individual():
-        path = [start]
-        while path[-1] != goal:
-            neighbors = russia3270.get(path[-1], [])
-            if not neighbors:
-                break
-            next_city = random.choice(neighbors)[0]
-            if next_city not in path:
-                path.append(next_city)
-        return path
-
-    def fitness(path):
-        total = 0
-        for i in range(len(path) - 1):
-            for neighbor, cost in russia3270.get(path[i], []):
-                if neighbor == path[i + 1]:
-                    total += cost
-                    break
-        if path[-1] != goal:
-            total += 1000  # penalty
-        return total
-
-    def mutate(path):
-        if random.random() < mutation_rate:
-            idx = random.randint(1, len(path) - 1)
-            neighbors = russia3270.get(path[idx - 1], [])
-            if neighbors:
-                path[idx] = random.choice(neighbors)[0]
-        return path
-
-    def crossover(parent1, parent2):
-        cut = random.randint(1, min(len(parent1), len(parent2)) - 1)
-        child = parent1[:cut]
-        for city in parent2:
-            if city not in child:
-                child.append(city)
-        return child
-
-    population = [create_individual() for _ in range(population_size)]
-    for generation in range(generations):
-        population = sorted(population, key=fitness)
-        if fitness(population[0]) < 1000 and population[0][-1] == goal:
-            return population[0], fitness(population[0])
-        next_generation = population[:10]  # keep top 10
-        while len(next_generation) < population_size:
-            p1, p2 = random.sample(population[:20], 2)
-            child = crossover(p1, p2)
-            child = mutate(child)
-            next_generation.append(child)
-        population = next_generation
-
-    return population[0], fitness(population[0])
