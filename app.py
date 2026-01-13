@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify
-from russia3270 import bfs, dfs, dls, astar, genetic_algorithm, russia3270
+from russia3270 import bfs, dfs, astar, russia3270
 import random
 import os
 
@@ -55,13 +55,8 @@ def get_route():
         path, cost = bfs(start, end)
     elif algo == "dfs":
         path, cost = dfs(start, end)
-    elif algo == "dls":
-        # ограничение глубины можно менять
-        path, cost = dls(start, end, limit=5)
     elif algo == "astar":
         path, cost = astar(start, end)
-    elif algo == "genetic":
-        path, cost = genetic_algorithm(start, end)
     else:
         # Если пришло что-то непонятное — не роняем сервер,
         # просто используем BFS и добавляем примечание
@@ -81,3 +76,4 @@ def get_route():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
